@@ -1,0 +1,12 @@
+#norland:
+#  listen-port: 2376
+#  reader-idle-time: 10
+#  writer-idle-time: 0
+#  all-idle-time: 0
+#  leak-detector-level: PARANOID
+#  dispatcher-enabled: true
+#  long-time-executor-enabled: true
+#  core-thread-num: 3
+#  current-thread-num: 5
+#  max-thread-num: 6
+#  server-type: TCP
