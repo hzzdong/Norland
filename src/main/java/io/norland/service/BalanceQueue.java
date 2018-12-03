@@ -13,7 +13,7 @@ public class BalanceQueue<E> {
     @SuppressWarnings("unchecked")
     public BalanceQueue() {
         queueNum = Math.max(1,
-                Runtime.getRuntime().availableProcessors() * 2);
+                Runtime.getRuntime().availableProcessors() * 2 - 1);
         queues = new ConcurrentLinkedQueue[queueNum];
         for (int i = 0; i < queueNum; i++) {
             queues[i] = new ConcurrentLinkedQueue<E>();

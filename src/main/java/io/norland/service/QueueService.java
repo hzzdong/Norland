@@ -85,6 +85,12 @@ public class QueueService {
                 6 : properties.getMaxThreadNum();
         currentThreadNum = properties.getCurrentThreadNum() == null ?
                 5 : properties.getCurrentThreadNum();
+        int availableProcessors = Math.max(1,
+                Runtime.getRuntime().availableProcessors() * 2 - 1);
+        //如果配置的线程数目大于系统能提供的线程数则线程数为默认值
+        if (currentThreadNum > availableProcessors) {
+            currentThreadNum = availableProcessors;
+        }
     }
 
     @PreDestroy
