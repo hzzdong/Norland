@@ -1,8 +1,6 @@
 package io.norland.proto;
 
 
-import java.io.Serializable;
-
 /**
  * writable protocol
  */

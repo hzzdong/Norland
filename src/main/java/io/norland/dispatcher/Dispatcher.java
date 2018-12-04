@@ -6,7 +6,6 @@ import io.norland.dispatcher.interceptor.HandlerInterceptor;
 import io.norland.proto.AbstractWrapper;
 import io.norland.response.ActionAndModel;
 import io.norland.response.Actions;
-import lombok.extern.log4j.Log4j;
 import org.springframework.context.ApplicationContext;
 
 import java.lang.reflect.Method;
@@ -14,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@Log4j
 public class Dispatcher {
     private List<HandlerMapping> reqHandlerMappings;
     private List<HandlerAdapter> reqHandlerAdapters;

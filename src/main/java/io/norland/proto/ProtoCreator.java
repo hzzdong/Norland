@@ -1,8 +1,7 @@
 package io.norland.proto;
 
 import io.norland.annotations.Proto;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.Resource;
@@ -18,8 +17,8 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class ProtoCreator {
-    private final Log logger = LogFactory.getLog(getClass());
     private static final String DEFAULT_RESOURCE_PATTERN = "**/*.class";
     private String resourcePattern = DEFAULT_RESOURCE_PATTERN;
 
@@ -91,8 +90,8 @@ public class ProtoCreator {
             MetadataReaderFactory metadataReaderFactory = new CachingMetadataReaderFactory(
                     loader);
             for (Resource resource : resources) {
-                if (logger.isDebugEnabled()) {
-                    logger.info("Scanning " + resource);
+                if (log.isDebugEnabled()) {
+                    log.info("Scanning " + resource);
                 }
                 Class<?> clazz = loadClass(loader, metadataReaderFactory, resource);
                 if (clazz == null)
@@ -122,8 +121,8 @@ public class ProtoCreator {
             handleFailure(resource, ex);
             return null;
         } catch (Throwable ex) {
-            if (this.logger.isWarnEnabled()) {
-                this.logger.warn(
+            if (log.isWarnEnabled()) {
+                log.warn(
                         "Unexpected failure when loading class resource " + resource, ex);
             }
             return null;
@@ -131,8 +130,8 @@ public class ProtoCreator {
     }
 
     private void handleFailure(Resource resource, Throwable ex) {
-        if (this.logger.isDebugEnabled()) {
-            this.logger.debug(
+        if (log.isDebugEnabled()) {
+            log.debug(
                     "Ignoring candidate class resource " + resource + " due to " + ex);
         }
     }

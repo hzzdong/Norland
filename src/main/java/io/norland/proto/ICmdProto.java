@@ -1,7 +1,5 @@
 package io.norland.proto;
 
-import java.io.Serializable;
-
 /**
  * command protocol model
  */

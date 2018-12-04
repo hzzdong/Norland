@@ -3,8 +3,6 @@ package io.norland.proto;
 
 import io.norland.buffer.AutoBuffer;
 
-import java.io.Serializable;
-
 /**
  * writable protocol
  */
