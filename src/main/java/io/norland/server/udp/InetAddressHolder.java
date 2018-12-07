@@ -18,21 +18,16 @@ public class InetAddressHolder {
 
     private static List<Channel> channelList = new ArrayList<>();
 
-    private final static ConcurrentHashMap<Integer, InetSocketAddress> addressHashMap
-            = new ConcurrentHashMap<>();
-
-    private final static ConcurrentHashMap<String, Integer> serialNoAddressMap
+    private final static ConcurrentHashMap<String, InetSocketAddress> serialNoAddressMap
             = new ConcurrentHashMap<>();
 
     public static void send(String serialNo, Object socketFrame) {
-        Integer hashCode = serialNoAddressMap.get(serialNo);
-        if (hashCode != null) {
-            UdpMessage udpMessage = new UdpMessage();
-            udpMessage.setSerialNo(serialNo);
-            udpMessage.setAddress(addressHashMap.get(hashCode));
-            udpMessage.setValue(socketFrame);
-            innerSender(udpMessage);
-        }
+        InetSocketAddress address = serialNoAddressMap.get(serialNo);
+        UdpMessage udpMessage = new UdpMessage();
+        udpMessage.setSerialNo(serialNo);
+        udpMessage.setAddress(address);
+        udpMessage.setValue(socketFrame);
+        innerSender(udpMessage);
     }
 
     public static void send(List<String> serialNos, Object socketFrame) {
@@ -58,7 +53,6 @@ public class InetAddressHolder {
     public static void removeUdpChannel(Channel channel) {
         channelList.remove(channel);
         if (channelList.size() == 0) {
-            addressHashMap.clear();
             serialNoAddressMap.clear();
         }
     }
@@ -67,15 +61,17 @@ public class InetAddressHolder {
         channelList.add(channel);
     }
 
-    public static void bindSerialNoWithInetSocketAddress(String serialNo,
-                                                         InetSocketAddress inetSocketAddress) {
-        serialNoAddressMap.put(serialNo, Objects.hash(inetSocketAddress));
+    public static void
+    bindSerialNoWithInetSocketAddress(String serialNo,
+                                      InetSocketAddress address) {
+        serialNoAddressMap.put(serialNo, address);
     }
 
-    public static String getTerminalSerialNoByInetSocketAddress(InetSocketAddress address) {
-        Integer hashCode = Objects.hash(address);
-        for (Map.Entry<String, Integer> entry : serialNoAddressMap.entrySet()) {
-            if (entry.getValue().equals(hashCode)) {
+    public static String
+    getTerminalSerialNoByInetSocketAddress(InetSocketAddress address) {
+        for (Map.Entry<String, InetSocketAddress> entry
+                : serialNoAddressMap.entrySet()) {
+            if (entry.getValue().equals(address)) {
                 return entry.getKey();
             }
         }
