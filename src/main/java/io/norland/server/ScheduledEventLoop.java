@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ScheduledEventLoop {
-    private ReentrantLock lock = new ReentrantLock();
+    private final static ReentrantLock lock = new ReentrantLock();
     private int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
 
     private ScheduledThreadPoolExecutor scheduledPool =
