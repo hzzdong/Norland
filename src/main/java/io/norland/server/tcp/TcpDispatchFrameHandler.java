@@ -1,18 +1,15 @@
-package io.norland.server;
+package io.norland.server.tcp;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.norland.proto.AbstractWrapper;
 import io.norland.dispatcher.Dispatcher;
-import io.norland.server.ChannelHolder;
 
-@ChannelHandler.Sharable
-public class ProtoDispatchFrameHandler extends SimpleChannelInboundHandler<AbstractWrapper> {
+public class TcpDispatchFrameHandler extends SimpleChannelInboundHandler<AbstractWrapper> {
 
     private Dispatcher dispatcher;
 
-    public ProtoDispatchFrameHandler(Dispatcher dispatcher) {
+    public TcpDispatchFrameHandler(Dispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 
@@ -24,7 +21,10 @@ public class ProtoDispatchFrameHandler extends SimpleChannelInboundHandler<Abstr
                 ChannelHolder.bindSerialNoWithChannel(serialNo, ctx.channel());
             }
         }
-        dispatcher.dispatch(req, ctx);
+        Object value = dispatcher.dispatch(req, ctx.channel());
+        if (value != null) {
+            ctx.channel().writeAndFlush(value);
+        }
     }
 
     @Override

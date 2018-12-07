@@ -1,5 +1,6 @@
 package io.norland.dispatcher;
 
+import io.netty.channel.Channel;
 import io.norland.annotations.ReqMapping;
 import io.netty.channel.ChannelHandlerContext;
 import io.norland.dispatcher.interceptor.HandlerInterceptor;
@@ -80,7 +81,7 @@ public class Dispatcher {
         return sum != 0L;
     }
 
-    public void dispatch(AbstractWrapper request, ChannelHandlerContext ctx) throws Exception {
+    public Object dispatch(AbstractWrapper request, Channel channel) throws Exception {
         HandlerExecutionChain mappedHandler = getHandler(request);
         if (mappedHandler == null)
             throw new RuntimeException("This protocol may not Uplink protocol there is no handler");
@@ -88,18 +89,21 @@ public class Dispatcher {
         if (ha == null)
             throw new RuntimeException("no Adapter");
         if (!mappedHandler.applyPreHandle(request)) {
-            return;
+            return null;
         }
         ActionAndModel model = (ActionAndModel) ha.handle(request,
                 mappedHandler.getController(),
-                ctx.channel());
+                channel);
         mappedHandler.applyPostHandle(request, model);
+        return processDispatchResult(model);
+    }
 
-        if (Actions.NO_RESPONSE.equals(model.getAction()) || model.getValue() == null) {
-            return;
-        }
-        if (Actions.RESPONSE.equals(model.getAction())) {
-            ctx.channel().writeAndFlush(model.getValue());
+    private Object processDispatchResult(ActionAndModel model) throws Exception {
+        if (Actions.NO_RESPONSE.equals(model.getAction())
+                || model.getValue() == null) {
+            return null;
+        } else {
+            return model.getValue();
         }
     }
 

@@ -4,13 +4,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageCodec;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 
+@Slf4j
 public class UdpEchoFrameCodec extends MessageToMessageCodec<DatagramPacket, Object> {
-    private Logger logger = Logger.getLogger(UdpEchoFrameCodec.class);
 
     private InetSocketAddress socketAddress;
 
@@ -23,7 +23,7 @@ public class UdpEchoFrameCodec extends MessageToMessageCodec<DatagramPacket, Obj
             buf.readBytes((byte[]) msg);
             DatagramPacket packet = new DatagramPacket(buf, socketAddress);
             out.add(packet);
-            logger.info("SEND MASSAGE: " + toHexString((byte[]) msg));
+            log.info("SEND MASSAGE: " + toHexString((byte[]) msg));
         }
     }
 
@@ -32,7 +32,7 @@ public class UdpEchoFrameCodec extends MessageToMessageCodec<DatagramPacket, Obj
                           DatagramPacket packet,
                           List<Object> out) throws Exception {
         socketAddress = packet.sender();
-        logger.info("消息来源 : "
+        log.info("消息来源 : "
                 + socketAddress.getHostString()
                 + ":" + socketAddress.getPort());
         ByteBuf in = packet.content();

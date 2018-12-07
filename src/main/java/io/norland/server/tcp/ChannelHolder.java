@@ -1,4 +1,4 @@
-package io.norland.server;
+package io.norland.server.tcp;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
@@ -24,8 +24,6 @@ public class ChannelHolder {
             = new ConcurrentHashMap<>();
 
     private final static AttributeKey<String> attributeKey = AttributeKey.valueOf("terminalSerialNo");
-    private final static AttributeKey<SharedParam> sharedParamAttributeKey = AttributeKey.valueOf("sharedParam");
-
 
     public static void send(String serialNo, Object socketFrame) {
         ChannelId channelId = channelIdMap.get(serialNo);
@@ -89,14 +87,6 @@ public class ChannelHolder {
 
     public static String getTerminalSerialNoByChannel(Channel channel) {
         return channel.attr(attributeKey).get();
-    }
-
-    public static SharedParam getSharedParamByChannel(Channel channel) {
-        return channel.attr(sharedParamAttributeKey).get();
-    }
-
-    public static void setSharedParam(Channel channel, SharedParam sharedParam) {
-        channel.attr(sharedParamAttributeKey).setIfAbsent(sharedParam);
     }
 
     public static Channel getChannelBySerialNo(String serialNo) {

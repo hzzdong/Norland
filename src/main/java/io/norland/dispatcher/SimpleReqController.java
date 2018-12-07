@@ -4,7 +4,7 @@ import io.netty.channel.Channel;
 import io.norland.annotations.ReqMapping;
 import io.norland.proto.AbstractWrapper;
 import io.norland.response.ActionAndModel;
-import io.norland.server.ChannelHolder;
+import io.norland.util.SharedParamUtil;
 import io.norland.server.SharedParam;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.util.Assert;
@@ -104,10 +104,10 @@ public class SimpleReqController implements ReqController {
             }
             //SharedParam存储在channel中，同一连接的不同消息之间可通过此类共享数据
             if (SharedParam.class == paramType) {
-                SharedParam sharedParam = ChannelHolder.getSharedParamByChannel(channel);
+                SharedParam sharedParam = SharedParamUtil.getSharedParamByChannel(channel);
                 if (sharedParam == null) {
                     sharedParam = new SharedParam();
-                    ChannelHolder.setSharedParam(channel, sharedParam);
+                    SharedParamUtil.setSharedParam(channel, sharedParam);
                 }
                 params.add(sharedParam);
                 continue;

@@ -1,6 +1,7 @@
 package io.norland.service;
 
 
+
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -8,12 +9,10 @@ public class BalanceQueue<E> {
     private ConcurrentLinkedQueue<E>[] queues;
     private Chooser pushChooser;
     private Chooser pollChooser;
-    private int queueNum;
+    private int queueNum = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
 
     @SuppressWarnings("unchecked")
     public BalanceQueue() {
-        queueNum = Math.max(1,
-                Runtime.getRuntime().availableProcessors() * 2 - 1);
         queues = new ConcurrentLinkedQueue[queueNum];
         for (int i = 0; i < queueNum; i++) {
             queues[i] = new ConcurrentLinkedQueue<E>();

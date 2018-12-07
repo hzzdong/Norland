@@ -18,9 +18,6 @@ public class ProtoProperties {
     private boolean dispatcherEnabled;
     private String serverType;//udp tcp
     private Integer listenPort;
-    private Long readerIdleTime;
-    private Long writerIdleTime;
-    private Long allIdleTime;
     private String leakDetectorLevel;
 
     private boolean longTimeExecutorEnabled;

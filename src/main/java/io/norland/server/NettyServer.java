@@ -2,28 +2,34 @@ package io.norland.server;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.channel.epoll.EpollDatagramChannel;
+import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.ResourceLeakDetector;
 import io.norland.autoconfigure.ProtoProperties;
 import io.norland.dispatcher.Dispatcher;
+import io.norland.server.tcp.TcpDispatchFrameHandler;
+import io.norland.server.udp.UdpDispatchFrameHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.log4j.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.concurrent.TimeUnit;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 基于NETTY框架服务器
  */
 @Slf4j
 public class NettyServer {
-    private static Logger logger = Logger.getLogger(NettyServer.class);
 
     private ProtoProperties properties;
     private Dispatcher dispatcher;
@@ -31,12 +37,10 @@ public class NettyServer {
 
     private String serverType;//udp tcp
     private int listenPort;
-    private long readerIdleTime;
-    private long writerIdleTime;
-    private long allIdleTime;
     private String leakDetectorLevel;
 
     private ChannelFuture f;
+    private List<ChannelFuture> futureList = new ArrayList<>();
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
@@ -53,12 +57,6 @@ public class NettyServer {
                 "tcp" : properties.getServerType();
         listenPort = properties.getListenPort() == null ?
                 8633 : properties.getListenPort();
-        readerIdleTime = properties.getReaderIdleTime() == null ?
-                30 : properties.getReaderIdleTime();
-        writerIdleTime = properties.getWriterIdleTime() == null ?
-                0 : properties.getWriterIdleTime();
-        allIdleTime = properties.getAllIdleTime() == null ?
-                0 : properties.getAllIdleTime();
         leakDetectorLevel = properties.getLeakDetectorLevel() == null ?
                 "DEFAULT" : properties.getLeakDetectorLevel();
     }
@@ -73,7 +71,9 @@ public class NettyServer {
                     @Override
                     protected void initChannel(SocketChannel ch)
                             throws Exception {
-                        appendHandlesToPipeline(ch.pipeline());
+                        ChannelPipeline pipeline = ch.pipeline();
+                        appendUserHandle(pipeline);
+                        pipeline.addLast(new TcpDispatchFrameHandler(dispatcher));
                     }
                 })
                 .option(ChannelOption.SO_BACKLOG, 128)
@@ -88,37 +88,47 @@ public class NettyServer {
     }
 
     public void startUdp() throws Exception {
-        Bootstrap b = new Bootstrap();
-        workerGroup = new NioEventLoopGroup();
-        b.group(workerGroup)
-                .channel(NioDatagramChannel.class)
-                .handler(new ChannelInitializer<NioDatagramChannel>() {
-                    @Override
-                    public void initChannel(NioDatagramChannel ch)
-                            throws Exception {
-                        appendHandlesToPipeline(ch.pipeline());
-                    }
-                }).option(ChannelOption.SO_BROADCAST, true)
+        int epollNum = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+        InetSocketAddress address = new InetSocketAddress(listenPort);
+        EventLoopGroup group = Epoll.isAvailable() ?
+                new EpollEventLoopGroup(epollNum) : new NioEventLoopGroup();
+        Class<? extends Channel> channel = Epoll.isAvailable() ?
+                EpollDatagramChannel.class : NioDatagramChannel.class;
+        Bootstrap bootstrap = new Bootstrap()
+                .group(group)
+                .channel(channel)
+                .option(ChannelOption.SO_BROADCAST, true)
                 .option(ChannelOption.SO_RCVBUF, 1024 * 1024)
-                .option(ChannelOption.SO_SNDBUF, 1024 * 1024);
-
-        // 绑定端口，开始接收进来的连接
-        f = b.bind(listenPort).sync()
-                .addListener(future ->
-                        log.info("NettyService " +
-                                "startUdp success (UDP"
-                                + listenPort + ")"));
-    }
-
-    private void appendHandlesToPipeline(ChannelPipeline pipeline)
-            throws Exception {
-        appendHeartBeat(pipeline);
-        appendUserHandle(pipeline);
-        appendDispatcher(pipeline);
-    }
-
-    private void appendDispatcher(ChannelPipeline pipeline) {
-        pipeline.addLast(new ProtoDispatchFrameHandler(dispatcher));
+                .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    public void initChannel(Channel ch)
+                            throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        appendUserHandle(pipeline);
+                        pipeline.addLast(new UdpDispatchFrameHandler(dispatcher));
+                    }
+                });
+        if (Epoll.isAvailable()) {
+            bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                    // linux系统下使用SO_REUSEPORT特性（提高性能），使得多个线程绑定同一个端口
+                    .option(EpollChannelOption.SO_REUSEPORT, true);
+            log.info("using epoll reuseport and epollNum:" + epollNum);
+            for (int i = 0; i < epollNum; ++i) {
+                ChannelFuture future = bootstrap.bind(address).await();
+                if (!future.isSuccess())
+                    throw new Exception(String.format("Fail to bind on [host = %s , port = %d].",
+                            address.getHostString(),
+                            address.getPort()), future.cause());
+                futureList.add(future);
+            }
+        } else {
+            // 绑定端口，开始接收进来的连接
+            f = bootstrap.bind(listenPort).sync();
+        }
+        log.info("NettyService " +
+                "startUdp success (UDP"
+                + listenPort + ")");
     }
 
     private void appendUserHandle(ChannelPipeline pipeline)
@@ -126,14 +136,6 @@ public class NettyServer {
         if (protoChannelInitializer != null) {
             protoChannelInitializer.initChannel(pipeline);
         }
-    }
-
-    private void appendHeartBeat(ChannelPipeline pipeline) {
-        pipeline.addLast(new IdleStateHandler(readerIdleTime,
-                writerIdleTime,
-                allIdleTime,
-                TimeUnit.MINUTES));
-        pipeline.addLast(new HeartBeatServerHandler());
     }
 
     private void setNettyLeakDetectorLevel() {
@@ -165,13 +167,16 @@ public class NettyServer {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("NettyService startTcp fail");
+            log.error("NettyService start " + serverType + " fail");
         }
     }
 
     @PreDestroy
     public void PreDestroy() {
         if (f != null) {
+            f.channel().close().awaitUninterruptibly();
+        }
+        for (ChannelFuture f : futureList) {
             f.channel().close().awaitUninterruptibly();
         }
         if (bossGroup != null)
