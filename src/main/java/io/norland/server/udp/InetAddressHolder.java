@@ -52,9 +52,6 @@ public class InetAddressHolder {
 
     public static void removeUdpChannel(Channel channel) {
         channelList.remove(channel);
-        if (channelList.size() == 0) {
-            serialNoAddressMap.clear();
-        }
     }
 
     public static void addChannel(Channel channel) {
@@ -84,5 +81,10 @@ public class InetAddressHolder {
 
     public static boolean containsKey(String serialNo) {
         return serialNoAddressMap.containsKey(serialNo);
+    }
+
+    public static void clear() {
+        channelList.clear();
+        serialNoAddressMap.clear();
     }
 }
