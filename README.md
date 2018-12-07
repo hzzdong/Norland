@@ -43,9 +43,6 @@ getTerminalSerialNo需返回设备的唯一标识，比如设备SimNo，物联�
 norland:
     dispatcher-enabled: true #是否开启请求分发
     listen-port: 2376 #netty监听的端口
-    reader-idle-time: 10 #读操作过期时限
-    writer-idle-time: 0 #写操作过期时限
-    all-idle-time: 0 #读与写过期时限
     leak-detector-level: PARANOID #netty内存溢出监听，可能值DISABLED SIMPLE ADVANCED PARANOID
     server-type: TCP #服务器类别,可能值TCP UDP
     long-time-executor-enabled: true #是否开启长时处理队列
