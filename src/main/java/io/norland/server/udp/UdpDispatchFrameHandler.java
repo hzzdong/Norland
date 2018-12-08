@@ -20,7 +20,7 @@ public class UdpDispatchFrameHandler extends SimpleChannelInboundHandler<Abstrac
         String serialNo = req.getTerminalSerialNo();
         if (serialNo != null && !serialNo.equals("")) {
             if (!InetAddressHolder.containsKey(serialNo)) {
-                InetAddressHolder.bindSerialNoWithInetSocketAddress(serialNo, req.requestInetSocketAddress());
+                InetAddressHolder.bind(serialNo, req.requestInetSocketAddress());
             }
         }
         Object value = dispatcher.dispatch(req, ctx.channel());
@@ -35,11 +35,11 @@ public class UdpDispatchFrameHandler extends SimpleChannelInboundHandler<Abstrac
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        InetAddressHolder.addChannel(ctx.channel());
+        InetAddressHolder.add(ctx.channel());
     }
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        InetAddressHolder.removeUdpChannel(ctx.channel());
+        InetAddressHolder.remove(ctx.channel());
     }
 }

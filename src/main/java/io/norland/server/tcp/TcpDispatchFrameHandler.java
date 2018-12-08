@@ -18,7 +18,7 @@ public class TcpDispatchFrameHandler extends SimpleChannelInboundHandler<Abstrac
         String serialNo = req.getTerminalSerialNo();
         if (serialNo != null && !serialNo.equals("")) {
             if (!ChannelHolder.containsKey(serialNo)) {
-                ChannelHolder.bindSerialNoWithChannel(serialNo, ctx.channel());
+                ChannelHolder.bind(serialNo, ctx.channel());
             }
         }
         Object value = dispatcher.dispatch(req, ctx.channel());

@@ -3,6 +3,7 @@ package io.norland.server.tcp;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelId;
 import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.ChannelMatcher;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -12,23 +13,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class ChannelHolder {
 
-    private final static ChannelGroup allChannels
+    private final static ChannelGroup channelGroup
             = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
-    private final static ConcurrentHashMap<String, ChannelId> channelIdMap
+    private final static ConcurrentHashMap<String, ChannelId> serialNoChannelIdMap
             = new ConcurrentHashMap<>();
 
-    private final static AttributeKey<String> attributeKey = AttributeKey.valueOf("terminalSerialNo");
+    private final static AttributeKey<String> serialNoAttributeKey =
+            AttributeKey.valueOf("serialNo");
 
     public static void send(String serialNo, Object socketFrame) {
-        ChannelId channelId = channelIdMap.get(serialNo);
+        ChannelId channelId = serialNoChannelIdMap.get(serialNo);
         if (channelId != null) {
-            Channel channel = allChannels.find(channelId);
+            Channel channel = channelGroup.find(channelId);
             if (channel != null) {
                 channel.writeAndFlush(socketFrame);
             }
@@ -36,68 +37,85 @@ public class ChannelHolder {
     }
 
     public static void send(List<String> serialNos, Object socketFrame) {
-        List<ChannelId> channelIds = serialNos.stream()
-                .map(serialNo -> channelIdMap.get(serialNo))
-                .filter(channelId -> channelId != null)
-                .collect(Collectors.toList());
-        allChannels.writeAndFlush(socketFrame, channel -> channelIds.contains(channel.id()));
+        List<ChannelId> channelIdList = new ArrayList<>();
+        for (String serialNo : serialNos) {
+            ChannelId channelId = serialNoChannelIdMap.get(serialNo);
+            if (channelId != null) {
+                channelIdList.add(channelId);
+            }
+        }
+        channelGroup.writeAndFlush(socketFrame, new ChannelMatcher() {
+            @Override
+            public boolean matches(Channel channel) {
+                ChannelId channelId = channel.id();
+                return channelIdList.contains(channelId);
+            }
+        });
     }
 
     public static void broadcast(Object socketFrame) {
-        allChannels.writeAndFlush(socketFrame);
+        channelGroup.writeAndFlush(socketFrame);
     }
 
     public static void remove(String serialNo) {
-        ChannelId channelId = channelIdMap.get(serialNo);
+        ChannelId channelId = serialNoChannelIdMap.get(serialNo);
         if (channelId != null) {
-            Channel channel = allChannels.find(channelId);
+            Channel channel = channelGroup.find(channelId);
             if (channel != null) {
-                allChannels.remove(channel);
+                channelGroup.remove(channel);
             }
         }
     }
 
     public static void remove(Channel channel) {
-        allChannels.remove(channel);
-        String serialNo = channel.attr(attributeKey).get();
+        channelGroup.remove(channel);
+        String serialNo = channel.attr(serialNoAttributeKey).get();
         if (serialNo != null) {
-            channelIdMap.remove(serialNo);
+            serialNoChannelIdMap.remove(serialNo);
             return;
         }
-        for (Map.Entry<String, ChannelId> entry : channelIdMap.entrySet()) {
+        for (Map.Entry<String, ChannelId> entry : serialNoChannelIdMap.entrySet()) {
             if (entry.getValue().equals(channel.id())) {
-                channelIdMap.remove(entry.getKey());
+                serialNoChannelIdMap.remove(entry.getKey());
                 return;
             }
         }
     }
 
     public static void add(Channel channel) {
-        allChannels.add(channel);
+        channelGroup.add(channel);
     }
 
-    public static void bindSerialNoWithChannel(String serialNo, Channel channel) {
-        channelIdMap.put(serialNo, channel.id());
-        channel.attr(attributeKey).setIfAbsent(serialNo);
+    public static void bind(String serialNo, Channel channel) {
+        serialNoChannelIdMap.put(serialNo, channel.id());
+        channel.attr(serialNoAttributeKey).setIfAbsent(serialNo);
     }
 
-    public static List<String> getTerminalSerialNos() {
-        return new ArrayList<>(channelIdMap.keySet());
+    public static List<String> getSerialNoList() {
+        return new ArrayList<>(serialNoChannelIdMap.keySet());
     }
 
-    public static String getTerminalSerialNoByChannel(Channel channel) {
-        return channel.attr(attributeKey).get();
+    public static String getSerialNo(Channel channel) {
+        return channel.attr(serialNoAttributeKey).get();
     }
 
-    public static Channel getChannelBySerialNo(String serialNo) {
-        ChannelId channelId = channelIdMap.get(serialNo);
+    public static Channel getChannel(String serialNo) {
+        ChannelId channelId = serialNoChannelIdMap.get(serialNo);
         if (channelId != null) {
-            return allChannels.find(channelId);
+            return channelGroup.find(channelId);
         }
         return null;
     }
 
     public static boolean containsKey(String serialNo) {
-        return channelIdMap.containsKey(serialNo);
+        return serialNoChannelIdMap.containsKey(serialNo);
+    }
+
+    public static void clearSerialNos() {
+        serialNoChannelIdMap.clear();
+    }
+
+    public static void clearChannelGroup() {
+        channelGroup.close();
     }
 }

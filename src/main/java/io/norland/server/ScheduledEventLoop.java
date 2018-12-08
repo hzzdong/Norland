@@ -8,7 +8,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ScheduledEventLoop {
     private final static ReentrantLock lock = new ReentrantLock();
-    private int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+    private int DEFAULT_EVENT_LOOP_THREADS =
+            Math.max(3, Runtime.getRuntime().availableProcessors());
 
     private ScheduledThreadPoolExecutor scheduledPool =
             new ScheduledThreadPoolExecutor(DEFAULT_EVENT_LOOP_THREADS);

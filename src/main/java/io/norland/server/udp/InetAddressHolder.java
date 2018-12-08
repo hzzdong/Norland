@@ -7,7 +7,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,9 +15,9 @@ public class InetAddressHolder {
 
     private static final AtomicInteger idx = new AtomicInteger();
 
-    private static List<Channel> channelList = new ArrayList<>();
+    private static final List<Channel> channelGroup = new ArrayList<>();
 
-    private final static ConcurrentHashMap<String, InetSocketAddress> serialNoAddressMap
+    private static final ConcurrentHashMap<String, InetSocketAddress> serialNoAddressMap
             = new ConcurrentHashMap<>();
 
     public static void send(String serialNo, Object socketFrame) {
@@ -27,7 +26,7 @@ public class InetAddressHolder {
         udpMessage.setSerialNo(serialNo);
         udpMessage.setAddress(address);
         udpMessage.setValue(socketFrame);
-        innerSender(udpMessage);
+        chooseChannelAndSend(udpMessage);
     }
 
     public static void send(List<String> serialNos, Object socketFrame) {
@@ -36,36 +35,33 @@ public class InetAddressHolder {
         }
     }
 
-    private static void innerSender(UdpMessage udpMessage) {
-        if (channelList.size() == 0)
+    private static void chooseChannelAndSend(UdpMessage udpMessage) {
+        if (channelGroup.size() == 0)
             return;
         int index = next();
-        channelList.get(index).writeAndFlush(udpMessage);
+        channelGroup.get(index).writeAndFlush(udpMessage);
     }
 
     private static int next() {
-        int size = channelList.size();
+        int size = channelGroup.size();
         if (size <= 1)
             return 0;
-        return idx.getAndIncrement() % channelList.size();
+        return idx.getAndIncrement() % channelGroup.size();
     }
 
-    public static void removeUdpChannel(Channel channel) {
-        channelList.remove(channel);
+    public static void remove(Channel channel) {
+        channelGroup.remove(channel);
     }
 
-    public static void addChannel(Channel channel) {
-        channelList.add(channel);
+    public static void add(Channel channel) {
+        channelGroup.add(channel);
     }
 
-    public static void
-    bindSerialNoWithInetSocketAddress(String serialNo,
-                                      InetSocketAddress address) {
+    public static void bind(String serialNo, InetSocketAddress address) {
         serialNoAddressMap.put(serialNo, address);
     }
 
-    public static String
-    getTerminalSerialNoByInetSocketAddress(InetSocketAddress address) {
+    public static String getSerialNo(InetSocketAddress address) {
         for (Map.Entry<String, InetSocketAddress> entry
                 : serialNoAddressMap.entrySet()) {
             if (entry.getValue().equals(address)) {
@@ -75,7 +71,7 @@ public class InetAddressHolder {
         return null;
     }
 
-    public static List<String> getTerminalSerialNos() {
+    public static List<String> getSerialNoList() {
         return new ArrayList<>(serialNoAddressMap.keySet());
     }
 
@@ -83,8 +79,11 @@ public class InetAddressHolder {
         return serialNoAddressMap.containsKey(serialNo);
     }
 
-    public static void clear() {
-        channelList.clear();
+    public static void clearSerialNos() {
         serialNoAddressMap.clear();
+    }
+
+    public static void clearChannelGroup() {
+        channelGroup.clear();
     }
 }

@@ -9,7 +9,7 @@ public class BalanceQueue<E> {
     private ConcurrentLinkedQueue<E>[] queues;
     private Chooser pushChooser;
     private Chooser pollChooser;
-    private int queueNum = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+    private int queueNum = Math.max(3, Runtime.getRuntime().availableProcessors());
 
     @SuppressWarnings("unchecked")
     public BalanceQueue() {

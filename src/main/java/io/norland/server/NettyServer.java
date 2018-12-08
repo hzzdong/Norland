@@ -58,7 +58,7 @@ public class NettyServer {
         listenPort = properties.getListenPort() == null ?
                 8633 : properties.getListenPort();
         leakDetectorLevel = properties.getLeakDetectorLevel() == null ?
-                "DEFAULT" : properties.getLeakDetectorLevel();
+                "SIMPLE" : properties.getLeakDetectorLevel();
     }
 
     public void startTcp() throws Exception {
@@ -88,7 +88,7 @@ public class NettyServer {
     }
 
     public void startUdp() throws Exception {
-        int epollNum = Math.max(1, Runtime.getRuntime().availableProcessors() * 2);
+        int epollNum = Math.max(3, Runtime.getRuntime().availableProcessors());
         InetSocketAddress address = new InetSocketAddress(listenPort);
         EventLoopGroup group = Epoll.isAvailable() ?
                 new EpollEventLoopGroup(epollNum) : new NioEventLoopGroup();
